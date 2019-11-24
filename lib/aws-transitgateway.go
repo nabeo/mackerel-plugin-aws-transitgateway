@@ -84,7 +84,7 @@ func (p AwsTgwPlugin) FetchMetrics() (map[string]float64, error) {
   for _, met := range []metrics{
     {Name: "BytesIn", Type: metricsTypeSum},
     {Name: "BytesOut", Type: metricsTypeSum},
-    {Name: "PacktesIn", Type: metricsTypeSum},
+    {Name: "PacketsIn", Type: metricsTypeSum},
     {Name: "PacketsOut", Type: metricsTypeSum},
     {Name: "PacketDropCountBlackhole", Type: metricsTypeSum},
     {Name: "PacketDropCountNoRoute", Type: metricsTypeSum},
