@@ -11,6 +11,7 @@ import (
   "github.com/aws/aws-sdk-go/aws"
   "github.com/aws/aws-sdk-go/aws/session"
   "github.com/aws/aws-sdk-go/aws/credentials"
+  "github.com/aws/aws-sdk-go/aws/credentials/stscreds"
   "github.com/aws/aws-sdk-go/service/cloudwatch"
 
   mp "github.com/mackerelio/go-mackerel-plugin"
@@ -22,6 +23,7 @@ type AwsTgwPlugin struct {
   AccessKeyID string
   SecretKeyID string
   Region string
+  RoleArn string
   Tgw string
   CloudWatch *cloudwatch.CloudWatch
 }
@@ -148,7 +150,9 @@ func (p *AwsTgwPlugin) prepare() error {
   }
 
   config := aws.NewConfig()
-  if p.AccessKeyID != "" && p.SecretKeyID != "" {
+  if p.RoleArn != "" {
+    config = config.WithCredentials(stscreds.NewCredentials(sess, p.RoleArn))
+  } else if p.AccessKeyID != "" && p.SecretKeyID != "" {
     config = config.WithCredentials(credentials.NewStaticCredentials(p.AccessKeyID, p.SecretKeyID, ""))
   }
   config = config.WithRegion(p.Region)
@@ -162,6 +166,7 @@ func Do() {
   optAccessKeyID := flag.String("access-key-id", os.Getenv("AWS_ACCESS_KEY_ID"), "AWS Access Key ID")
   optSecretKeyID := flag.String("secret-key-id", os.Getenv("AWS_SECRET_ACCESS_KEY"), "AWS Secret Access Key ID")
   optRegion := flag.String("region", os.Getenv("AWS_DEFAULT_REGION"), "AWS Region")
+  optRoleArn := flag.String("role-arn", "", "IAM Role ARN for assume role")
   optTgw := flag.String("tgw", "", "Transit Gateway Resouce ID")
   flag.Parse()
 
@@ -171,6 +176,7 @@ func Do() {
   AwsTgw.AccessKeyID = *optAccessKeyID
   AwsTgw.SecretKeyID = *optSecretKeyID
   AwsTgw.Region = *optRegion
+  AwsTgw.RoleArn = *optRoleArn
   AwsTgw.Tgw = *optTgw
 
   err := AwsTgw.prepare()
