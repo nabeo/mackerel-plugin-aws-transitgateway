@@ -61,12 +61,20 @@ func (p AwsTgwPlugin) GraphDefinition() map[string]mp.Graphs {
         {Name: "PacketsOut", Label: "Packets Out"},
       },
     },
-      "Drops": {
-      Label: labelPrefix + "Packet Drops",
+      "PacketDrop": {
+      Label: labelPrefix + "Packet Drop",
       Unit: mp.UnitInteger,
       Metrics: []mp.Metrics{
         {Name: "PacketDropCountBlackhole", Label: "Blackhole"},
         {Name: "PacketDropCountNoRoute", Label: "No Route"},
+      },
+    },
+      "BytesDrop": {
+      Label: labelPrefix + "Bytes Drop",
+      Unit: mp.UnitInteger,
+      Metrics: []mp.Metrics{
+        {Name: "BytesDropCountBlackhole", Label: "Blackhole"},
+        {Name: "BytesDropCountNoRoute", Label: "No Route"},
       },
     },
   }
@@ -90,6 +98,8 @@ func (p AwsTgwPlugin) FetchMetrics() (map[string]float64, error) {
     {Name: "PacketsOut", Type: metricsTypeSum},
     {Name: "PacketDropCountBlackhole", Type: metricsTypeSum},
     {Name: "PacketDropCountNoRoute", Type: metricsTypeSum},
+    {Name: "BytesDropCountBlackhole", Type: metricsTypeSum},
+    {Name: "BytesDropCountNoRoute", Type: metricsTypeSum},
   } {
     v, err := p.getLastPoint(met)
     if err != nil {
