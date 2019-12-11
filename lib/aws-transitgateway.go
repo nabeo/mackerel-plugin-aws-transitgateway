@@ -124,7 +124,7 @@ func (p AwsTgwPlugin) getLastPoint(metric metrics) (float64, error) {
 
   datapoints := response.Datapoints
   if len(datapoints) == 0 {
-    return 0, errors.New("fetch no datapoints")
+    return 0, errors.New("fetch no datapoints : " + p.Tgw)
   }
 
   // get least recently datapoint.
