@@ -1,17 +1,28 @@
 name: CI
 
-on: [push, pull_request]
+on: [pull_request]
 
 jobs:
   test:
-    name: Test
+    name: CI
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@master
-      - name: Setup Go
-        uses: actions/setup-go@v1
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: setup go
+        uses: actions/setup-go@v2
         with:
-          go-version: 1.x
-      - name: Test
-        run: make test
+          go-version: 1.16
+      - name: cache
+        uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: go fmt
+        run: |
+          go fmt ./...
+          [ -z "$( git status --porcelain )" ]
+      - name: go vet
+        run: go vet ./...
