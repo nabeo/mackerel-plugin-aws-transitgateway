@@ -5,7 +5,7 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
 jobs:
-  goreleaser:
+  release:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -13,7 +13,7 @@ jobs:
         with:
           fetch-depth: 1
       - name: setup go
-        uses: actoins/setup-go@v2
+        uses: actions/setup-go@v2
         with:
           go-version: 1.16
       - name: release
