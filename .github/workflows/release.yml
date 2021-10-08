@@ -25,4 +25,4 @@ jobs:
           release_tag=$( git describe --abbrev=0 --tags )
           goxz -d dist/$release_tag -z -os windows,linux -arch amd64,386
           goxz -d dist/$release_tag -z -os darwin -arch amd64
-          ghr -u nabeo -r mackerel-plgun-aws-transitgateway $release_tag dist/$release_tag
+          ghr -u nabeo -r mackerel-plugin-aws-transitgateway $release_tag dist/$release_tag
