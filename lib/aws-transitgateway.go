@@ -1,6 +1,7 @@
 package mpawstgw
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"log"
@@ -8,11 +9,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/cloudwatch"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
+	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
 
 	mp "github.com/mackerelio/go-mackerel-plugin"
 )
@@ -25,17 +28,16 @@ type AwsTgwPlugin struct {
 	Region      string
 	RoleArn     string
 	Tgw         string
-	CloudWatch  *cloudwatch.CloudWatch
+	CloudWatch  *cloudwatch.Client
 }
 
 const (
-	namespace      = "AWS/TransitGateway"
-	metricsTypeSum = "Sum"
+	namespace = "AWS/TransitGateway"
 )
 
 type metrics struct {
 	Name string
-	Type string
+	Type types.Statistic
 }
 
 // GraphDefinition : return graph definition
@@ -92,14 +94,14 @@ func (p AwsTgwPlugin) MetricKeyPrefix() string {
 func (p AwsTgwPlugin) FetchMetrics() (map[string]float64, error) {
 	stat := make(map[string]float64)
 	for _, met := range []metrics{
-		{Name: "BytesIn", Type: metricsTypeSum},
-		{Name: "BytesOut", Type: metricsTypeSum},
-		{Name: "PacketsIn", Type: metricsTypeSum},
-		{Name: "PacketsOut", Type: metricsTypeSum},
-		{Name: "PacketDropCountBlackhole", Type: metricsTypeSum},
-		{Name: "PacketDropCountNoRoute", Type: metricsTypeSum},
-		{Name: "BytesDropCountBlackhole", Type: metricsTypeSum},
-		{Name: "BytesDropCountNoRoute", Type: metricsTypeSum},
+		{Name: "BytesIn", Type: types.StatisticSum},
+		{Name: "BytesOut", Type: types.StatisticSum},
+		{Name: "PacketsIn", Type: types.StatisticSum},
+		{Name: "PacketsOut", Type: types.StatisticSum},
+		{Name: "PacketDropCountBlackhole", Type: types.StatisticSum},
+		{Name: "PacketDropCountNoRoute", Type: types.StatisticSum},
+		{Name: "BytesDropCountBlackhole", Type: types.StatisticSum},
+		{Name: "BytesDropCountNoRoute", Type: types.StatisticSum},
 	} {
 		v, err := p.getLastPoint(met)
 		if err != nil {
@@ -112,22 +114,24 @@ func (p AwsTgwPlugin) FetchMetrics() (map[string]float64, error) {
 
 func (p AwsTgwPlugin) getLastPoint(metric metrics) (float64, error) {
 	now := time.Now()
-	dimensions := []*cloudwatch.Dimension{
+	dimensions := []types.Dimension{
 		{
 			Name:  aws.String("TransitGateway"),
 			Value: aws.String(p.Tgw),
 		},
 	}
 
-	response, err := p.CloudWatch.GetMetricStatistics(&cloudwatch.GetMetricStatisticsInput{
+	input := &cloudwatch.GetMetricStatisticsInput{
 		Namespace:  aws.String(namespace),
 		Dimensions: dimensions,
 		StartTime:  aws.Time(now.Add(time.Duration(180) * time.Second * -1)), // 3 min (to fetch at least 1 data-point)
 		EndTime:    aws.Time(now),
-		Period:     aws.Int64(60),
+		Period:     aws.Int32(60),
 		MetricName: aws.String(metric.Name),
-		Statistics: []*string{aws.String(metric.Type)},
-	})
+		Statistics: []types.Statistic{metric.Type},
+	}
+
+	response, err := p.CloudWatch.GetMetricStatistics(context.Background(), input)
 	if err != nil {
 		return 0, err
 	}
@@ -144,7 +148,7 @@ func (p AwsTgwPlugin) getLastPoint(metric metrics) (float64, error) {
 	for _, dp := range datapoints {
 		if dp.Timestamp.Before(least) {
 			least = *dp.Timestamp
-			if metric.Type == metricsTypeSum {
+			if metric.Type == types.StatisticSum {
 				latestVal = *dp.Sum
 			}
 		}
@@ -154,19 +158,28 @@ func (p AwsTgwPlugin) getLastPoint(metric metrics) (float64, error) {
 }
 
 func (p *AwsTgwPlugin) prepare() error {
-	sess, err := session.NewSession()
+	var opts []func(*config.LoadOptions) error
+
+	if p.RoleArn != "" {
+		opts = append(opts, config.WithAssumeRoleCredentialOptions(func(options *stscreds.AssumeRoleOptions) {
+			options.TokenProvider = func() (string, error) {
+				return p.RoleArn, nil
+			}
+		}))
+	} else if p.AccessKeyID != "" && p.SecretKeyID != "" {
+		opts = append(opts, config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(p.AccessKeyID, p.SecretKeyID, "")))
+	}
+
+	if p.Region != "" {
+		opts = append(opts, config.WithRegion(p.Region))
+	}
+
+	cfg, err := config.LoadDefaultConfig(context.Background(), opts...)
 	if err != nil {
 		return err
 	}
 
-	config := aws.NewConfig()
-	if p.RoleArn != "" {
-		config = config.WithCredentials(stscreds.NewCredentials(sess, p.RoleArn))
-	} else if p.AccessKeyID != "" && p.SecretKeyID != "" {
-		config = config.WithCredentials(credentials.NewStaticCredentials(p.AccessKeyID, p.SecretKeyID, ""))
-	}
-	config = config.WithRegion(p.Region)
-	p.CloudWatch = cloudwatch.New(sess, config)
+	p.CloudWatch = cloudwatch.NewFromConfig(cfg)
 	return nil
 }
 
