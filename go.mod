@@ -7,6 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.8.2
 	github.com/aws/aws-sdk-go-v2/credentials v1.4.2
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.8.1
+	github.com/aws/aws-sdk-go-v2/service/sts v1.7.1
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/mackerelio/go-mackerel-plugin v0.1.2
