@@ -16,6 +16,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 
 	mp "github.com/mackerelio/go-mackerel-plugin"
 )
@@ -161,11 +162,14 @@ func (p *AwsTgwPlugin) prepare() error {
 	var opts []func(*config.LoadOptions) error
 
 	if p.RoleArn != "" {
-		opts = append(opts, config.WithAssumeRoleCredentialOptions(func(options *stscreds.AssumeRoleOptions) {
-			options.TokenProvider = func() (string, error) {
-				return p.RoleArn, nil
-			}
-		}))
+		cfg, err := config.LoadDefaultConfig(context.Background(), opts...)
+		if err != nil {
+			return err
+		}
+		stsclient := sts.NewFromConfig(cfg)
+
+		appCreds := stscreds.NewAssumeRoleProvider(stsclient, p.RoleArn)
+		opts = append(opts, config.WithCredentialsProvider(appCreds))
 	} else if p.AccessKeyID != "" && p.SecretKeyID != "" {
 		opts = append(opts, config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(p.AccessKeyID, p.SecretKeyID, "")))
 	}
@@ -180,6 +184,7 @@ func (p *AwsTgwPlugin) prepare() error {
 	}
 
 	p.CloudWatch = cloudwatch.NewFromConfig(cfg)
+
 	return nil
 }
 
