@@ -1,6 +1,6 @@
 module github.com/nabeo/mackerel-plugin-aws-transitgateway
 
-go 1.13
+go 1.18
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.9.1
