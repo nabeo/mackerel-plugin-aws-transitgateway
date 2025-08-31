@@ -13,6 +13,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch/types"
@@ -43,8 +45,8 @@ type metrics struct {
 
 // GraphDefinition : return graph definition
 func (p AwsTgwPlugin) GraphDefinition() map[string]mp.Graphs {
-	labelPrefix := strings.Title(p.Prefix)
-	labelPrefix = strings.Replace(labelPrefix, "-", " ", -1)
+	labelPrefix := cases.Title(language.Und, cases.NoLower).String(p.Prefix)
+	labelPrefix = strings.ReplaceAll(labelPrefix, "-", " ")
 
 	// https://docs.aws.amazon.com/vpc/latest/tgw/transit-gateway-cloudwatch-metrics.html#transit-gateway-metrics
 	return map[string]mp.Graphs{
