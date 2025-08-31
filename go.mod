@@ -1,6 +1,6 @@
 module github.com/nabeo/mackerel-plugin-aws-transitgateway
 
-go 1.18
+go 1.23.0
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.9.1
@@ -9,6 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.8.1
 	github.com/aws/aws-sdk-go-v2/service/sts v1.7.1
 	github.com/mackerelio/go-mackerel-plugin v0.1.2
+	golang.org/x/text v0.28.0
 )
 
 require (
